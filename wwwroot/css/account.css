@@ -1,0 +1,28 @@
+.account-container {
+    background-image : url('../images/background-login.jpg');
+    background-size:cover;
+    background-position: center;
+    background-repeat: repeat-y;
+    display: flex;
+    justify-content:center;
+    min-height:100vh;
+    align-items:center;
+    padding: 2rem 0;
+}
+
+.account-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 0px rgba(0,0,0,0.3);
+    max-width: 500px;
+    width: 100%;
+    opacity: .9;
+}
+/*
+body {
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+}*/
