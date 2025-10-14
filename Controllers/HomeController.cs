@@ -7,7 +7,8 @@ using System.Diagnostics;
 
 namespace MVCProject.Controllers
 {
-   
+    [Route("api/[controller]")]
+    [ApiController]
     public class HomeController : Controller
     {
         private readonly MvcProductContext _context;
@@ -16,6 +17,8 @@ namespace MVCProject.Controllers
         {
             _context = context;
         }
+        //api/Home/Index
+        [HttpGet("Index")]
         public async Task<IActionResult> Index()
         {
             var products = await _context.Product
@@ -23,7 +26,7 @@ namespace MVCProject.Controllers
                                          .Take(8)
                                          .ToListAsync();
 
-            return View(products);
+            return Ok(products);
         }
 
 

@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 
 namespace MVCProject.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
     public class ProductController : Controller
     {
         private readonly MvcProductContext _context;
@@ -27,11 +29,11 @@ namespace MVCProject.Controllers
             return View(products);
         }
 
-        [Authorize]
+        [HttpGet("Products")]
         public async Task<IActionResult> Products()
         {
             var products = await _context.Product.ToListAsync();
-            return View( products);
+            return Ok(products);
         }
 
 

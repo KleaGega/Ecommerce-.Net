@@ -24,6 +24,16 @@ builder.Services.AddIdentity<Users, IdentityRole>(options =>
 .AddDefaultTokenProviders();
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:4200") 
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
@@ -34,7 +44,7 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
-
+app.UseCors("AllowAngular");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
@@ -46,6 +56,6 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.MapRazorPages(); // needed for Identity UI
+app.MapRazorPages();
 
 app.Run();

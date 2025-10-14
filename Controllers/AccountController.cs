@@ -1,160 +1,103 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MVCProject.Models;
 using MVCProject.ViewModels;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace MVCProject.Controllers
 {
-    public class AccountController : Controller
+    [Route("api/[controller]")]
+    [ApiController]  
+    public class AccountController : ControllerBase
     {
-
         private readonly SignInManager<Users> signInManager;
         private readonly UserManager<Users> userManager;
 
-        public AccountController(SignInManager<Users>signInManager, UserManager<Users> userManager)
+        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
         }
 
-        public IActionResult Login()
+        // POST: api/Account/Register
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromBody] RegisterViewModel model)
         {
-            return View();
-        }
-        [HttpPost]
-        public async Task<IActionResult> Login(LoginViewModel model)
-        {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = new Users
             {
-                var result = await  signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe,false);
-                if (result.Succeeded)
-                {
-                    return RedirectToAction("Index", "Home");
-                }else
-                {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return View(model);
+                FullName = model.Name,
+                Email = model.Email,
+                UserName = model.Email
+            };
 
-                }
+            var result = await userManager.CreateAsync(user, model.Password);
 
-            }
-            return View(model);
+            if (result.Succeeded)
+                return Ok(new { message = "User registered successfully" });
+
+            return BadRequest(result.Errors.Select(e => e.Description));
         }
 
-
-
-        public IActionResult Register()
+        // POST: api/Account/Login
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login([FromBody] LoginViewModel model)
         {
-            return View();
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
+
+            if (result.Succeeded)
+                return Ok(new { message = "Login successful" });
+
+            return Unauthorized(new { message = "Invalid login attempt" });
         }
-        [HttpPost]
-        public async Task<IActionResult> Register(RegisterViewModel model)
+
+        // POST: api/Account/VerifyEmail
+        [HttpPost("VerifyEmail")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailView model)
         {
-            if (ModelState.IsValid)
-            {
-                Users users = new Users()
-                {
-                    FullName = model.Name,
-                    Email = model.Email,
-                    UserName = model.Email
-                };
-                var result = await userManager.CreateAsync(users, model.Password);
-                if (result.Succeeded)
-                {
-                    return RedirectToAction("Login", "Account");
-                }
-                else
-                {
-                    foreach (var error in result.Errors)
-                    {
-                        ModelState.AddModelError("", error.Description);
-                    }
-                    return View(model);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-                }
+            var user = await userManager.FindByNameAsync(model.Email);
 
-            }
-            return View(model);
+            if (user == null)
+                return NotFound(new { message = "Email not found" });
+
+            return Ok(new { username = user.UserName });
         }
-        
-        public IActionResult VerifyEmail()
+
+        // POST: api/Account/ChangePassword
+        [HttpPost("ChangePassword")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordViewModel model)
         {
-            return View();
-        }
-        [HttpPost]
-        public async Task<IActionResult> VerifyEmail(VerifyEmailView model)
-        {
-            if (ModelState.IsValid)
-            {
-                var user = await userManager.FindByNameAsync(model.Email);
-                if(user == null)
-                {
-                    ModelState.AddModelError("", "Something is wrong!");
-                    return View(model);
-                }
-                else
-                {
-                    return RedirectToAction("ChangePassword","Account", new {username=user.UserName});
-                }
-            }
-            return View(model);
-            
-        }
-        public IActionResult ChangePassword(string username)
-        {
-            if (string.IsNullOrEmpty(username))
-            {
-                return RedirectToAction("VerifyEmail", "Account");
-            }
-            return View(new ChangePasswordViewModel { Email = username });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await userManager.FindByNameAsync(model.Email);
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            var removeResult = await userManager.RemovePasswordAsync(user);
+            if (!removeResult.Succeeded)
+                return BadRequest(removeResult.Errors.Select(e => e.Description));
+
+            var addResult = await userManager.AddPasswordAsync(user, model.NewPassword);
+            if (!addResult.Succeeded)
+                return BadRequest(addResult.Errors.Select(e => e.Description));
+
+            return Ok(new { message = "Password changed successfully" });
         }
 
-        [HttpPost]
-
-        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                var user = await userManager.FindByNameAsync(model.Email);
-                if (user != null)
-                {
-                    var result = await userManager.RemovePasswordAsync(user);
-                    if (result.Succeeded)
-                    {
-                        result = await userManager.AddPasswordAsync(user, model.NewPassword);
-                        return RedirectToAction("Login", "Account");
-                    }
-                    else
-                    {
-                        foreach (var error in result.Errors)
-                        {
-                            ModelState.AddModelError("", error.Description);
-                        }
-                        return View(model);
-
-                    }
-                }
-                else
-                {
-                    ModelState.AddModelError("", "Email not found.");
-                    return View(model);
-                }
-
-
-
-            }
-            else
-            {
-                ModelState.AddModelError("", "Something went wrong .Try again later.");
-                return View(model);
-            }
-        }
-
+        // POST: api/Account/Logout
+        [HttpPost("Logout")]
         public async Task<IActionResult> Logout()
         {
             await signInManager.SignOutAsync();
-            return RedirectToAction("Index","Home");
+            return Ok(new { message = "Logged out" });
         }
     }
 }
