@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MVCProject.Data;
 using MVCProject.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MVCProject.Controllers
 {
@@ -26,6 +27,7 @@ namespace MVCProject.Controllers
             return View(products);
         }
 
+        [Authorize]
         public async Task<IActionResult> Products()
         {
             var products = await _context.Product.ToListAsync();
@@ -33,7 +35,7 @@ namespace MVCProject.Controllers
         }
 
 
-        // GET: Product/Details/5
+       
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
