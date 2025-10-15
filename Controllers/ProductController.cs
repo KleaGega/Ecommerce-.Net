@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace MVCProject.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ProductController : Controller
@@ -22,11 +23,11 @@ namespace MVCProject.Controllers
             _context = context;
         }
 
-        // GET: Product
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             var products = await _context.Product.ToListAsync();
-            return View(products);
+            return Ok(products);
         }
 
         [HttpGet("Products")]
@@ -37,7 +38,7 @@ namespace MVCProject.Controllers
         }
 
 
-       
+        [HttpGet("Details")]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -52,40 +53,35 @@ namespace MVCProject.Controllers
                 return NotFound();
             }
 
-            return View(product);
+            return Ok(product);
         }
 
-        // GET: Product/Create
+        [HttpGet("Create")]
         public IActionResult Create()
-        {
-            return View();
+       {
+          return Ok();
         }
 
         // POST: Product/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Product product, IFormFile? ImageFile)
+        [HttpPost("Create")]
+        //[ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create([FromForm] Product product, IFormFile? ImageFile)
+
         {
             if (ImageFile != null && ImageFile.Length > 0)
             {
-                // 1️⃣ Create the folder if it doesn't exist
                 var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
                 if (!Directory.Exists(uploadsFolder))
                     Directory.CreateDirectory(uploadsFolder);
 
-                // 2️⃣ Generate a unique file name
                 var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
                 var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-                // 3️⃣ Copy file to server
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await ImageFile.CopyToAsync(stream);
                 }
 
-                // 4️⃣ Save the relative path in the model
                 product.ImagePath = "/images/" + uniqueFileName;
             }
 
@@ -96,11 +92,11 @@ namespace MVCProject.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(product);
+            return Ok(product);
         }
 
-
         // GET: Product/Edit/5
+        [HttpGet("Edit/{id}")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -113,14 +109,14 @@ namespace MVCProject.Controllers
             {
                 return NotFound();
             }
-            return View(product);
+            return Ok(product);
         }
 
         // POST: Product/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPut("Edit/{id}")]
+        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Price,Description,Status,ImagePath")] Product product, IFormFile? ImageFile)
         {
             if (id != product.Id)
@@ -132,7 +128,6 @@ namespace MVCProject.Controllers
             {
                 try
                 {
-                    // Handle image upload if a new file is selected
                     if (ImageFile != null && ImageFile.Length > 0)
                     {
                         var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
@@ -147,7 +142,6 @@ namespace MVCProject.Controllers
                             await ImageFile.CopyToAsync(stream);
                         }
 
-                        // Update the relative path
                         product.ImagePath = "/images/" + uniqueFileName;
                     }
 
@@ -167,11 +161,12 @@ namespace MVCProject.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(product);
+            return Ok(product);
         }
 
 
         // GET: Product/Delete/5
+        [HttpGet("Delete/{id}")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -186,12 +181,13 @@ namespace MVCProject.Controllers
                 return NotFound();
             }
 
-            return View(product);
+            return Ok(product);
         }
 
         // POST: Product/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
+        
+        [HttpDelete("Delete/{id}")]
+        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var product = await _context.Product.FindAsync(id);

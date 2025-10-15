@@ -1,21 +1,26 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MVCProject.Models;
+using MVCProject.Services;
 using MVCProject.ViewModels;
 
 namespace MVCProject.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]  
+    [ApiController]
     public class AccountController : ControllerBase
     {
         private readonly SignInManager<Users> signInManager;
         private readonly UserManager<Users> userManager;
+        private readonly JwtService jwtService;
+        private readonly IConfiguration configuration;
 
-        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager)
+        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager, JwtService jwtService, IConfiguration configuration)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
+            this.jwtService = jwtService;
+            this.configuration = configuration;
         }
 
         // POST: api/Account/Register
@@ -47,16 +52,60 @@ namespace MVCProject.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
+            var user = await userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return Unauthorized(new { message = "Invalid login attempt" });
 
-            if (result.Succeeded)
-                return Ok(new { message = "Login successful" });
+            var result = await signInManager.CheckPasswordSignInAsync(user, model.Password, false);
+            if (!result.Succeeded)
+                return Unauthorized(new { message = "Invalid login attempt" });
 
-            return Unauthorized(new { message = "Invalid login attempt" });
+            var tokens = jwtService.GenerateTokens(user);
+
+            user.RefreshToken = tokens.RefreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); 
+            await userManager.UpdateAsync(user);
+
+            var expiresIn = int.Parse(configuration["Jwt:TokenValidityMins"]) * 60;
+
+            return Ok(new
+            {
+                Token = tokens.AccessToken,
+                RefreshToken = tokens.RefreshToken,
+                ExpiresIn = expiresIn,
+                UserName = user.UserName
+            });
         }
 
-        // POST: api/Account/VerifyEmail
-        [HttpPost("VerifyEmail")]
+        // POST: api/Account/RefreshToken
+        [HttpPost("RefreshToken")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest model)
+        {
+            var user = await userManager.FindByNameAsync(model.UserName);
+            if (user == null || user.RefreshToken != model.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            {
+                return Unauthorized(new { message = "Invalid refresh token" });
+            }
+
+            var tokens = jwtService.GenerateTokens(user);
+
+            user.RefreshToken = tokens.RefreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            await userManager.UpdateAsync(user);
+
+            var expiresIn = int.Parse(configuration["Jwt:TokenValidityMins"]) * 60;
+
+            return Ok(new
+            {
+                Token = tokens.AccessToken,
+                RefreshToken = tokens.RefreshToken,
+                ExpiresIn = expiresIn,
+                UserName = user.UserName
+            });
+        }
+
+// POST: api/Account/VerifyEmail
+[HttpPost("VerifyEmail")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailView model)
         {
             if (!ModelState.IsValid)
