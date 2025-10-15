@@ -7,11 +7,12 @@ using MVCProject.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace MVCProject.Controllers
 {
-    [Authorize]
+    
     [Route("api/[controller]")]
     [ApiController]
     public class ProductController : Controller
@@ -55,13 +56,13 @@ namespace MVCProject.Controllers
 
             return Ok(product);
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpGet("Create")]
         public IActionResult Create()
        {
           return Ok();
         }
-
+        [Authorize(Roles = "Admin")]
         // POST: Product/Create
         [HttpPost("Create")]
         //[ValidateAntiForgeryToken]
@@ -94,7 +95,7 @@ namespace MVCProject.Controllers
 
             return Ok(product);
         }
-
+        [Authorize]
         // GET: Product/Edit/5
         [HttpGet("Edit/{id}")]
         public async Task<IActionResult> Edit(int? id)
@@ -111,7 +112,7 @@ namespace MVCProject.Controllers
             }
             return Ok(product);
         }
-
+        [Authorize]
         // POST: Product/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -164,7 +165,7 @@ namespace MVCProject.Controllers
             return Ok(product);
         }
 
-
+        [Authorize]
         // GET: Product/Delete/5
         [HttpGet("Delete/{id}")]
         public async Task<IActionResult> Delete(int? id)
@@ -185,7 +186,7 @@ namespace MVCProject.Controllers
         }
 
         // POST: Product/Delete/5
-        
+        [Authorize]
         [HttpDelete("Delete/{id}")]
         //[ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -199,7 +200,7 @@ namespace MVCProject.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-
+     
         private bool ProductExists(int id)
         {
             return _context.Product.Any(e => e.Id == id);

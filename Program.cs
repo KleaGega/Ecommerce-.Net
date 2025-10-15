@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using MVCProject.Data;
 using MVCProject.Models;
 using MVCProject.Services;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,7 +34,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAngular",
         policy =>
         {
-            policy.WithOrigins("http://localhost:4200") 
+            policy.WithOrigins("http://localhost:4200")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -57,13 +58,52 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+        RoleClaimType = ClaimTypes.Role
     };
 });
 builder.Services.AddAuthorization();
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<JwtService>();
 
+
+
 var app = builder.Build();
+  async Task SeedRolesAndUsers(IServiceProvider serviceProvider)
+{
+    var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = serviceProvider.GetRequiredService<UserManager<Users>>();
+
+    string[] roleNames = { "Admin", "User" };
+
+    foreach (var roleName in roleNames)
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+    }
+
+    var adminEmail = "admin@example.com";
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+    if (adminUser == null)
+    {
+        var newAdminUser = new Users
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            FullName = "Admin User"
+        };
+
+        var createUserResult = await userManager.CreateAsync(newAdminUser, "AdminPassword123!");
+        if (createUserResult.Succeeded)
+        {
+            await userManager.AddToRoleAsync(newAdminUser, "Admin");
+        }
+    }
+}
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await SeedRolesAndUsers(services);
+}
 
 // Middleware
 if (!app.Environment.IsDevelopment())

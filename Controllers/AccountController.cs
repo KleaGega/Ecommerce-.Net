@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MVCProject.Models;
 using MVCProject.Services;
 using MVCProject.ViewModels;
+using System.Security.Claims;
 
 namespace MVCProject.Controllers
 {
@@ -38,6 +40,7 @@ namespace MVCProject.Controllers
             };
 
             var result = await userManager.CreateAsync(user, model.Password);
+            await userManager.AddToRoleAsync(user, "User");
 
             if (result.Succeeded)
                 return Ok(new { message = "User registered successfully" });
@@ -60,7 +63,7 @@ namespace MVCProject.Controllers
             if (!result.Succeeded)
                 return Unauthorized(new { message = "Invalid login attempt" });
 
-            var tokens = jwtService.GenerateTokens(user);
+            var tokens = await  jwtService.GenerateTokensAsync(user);
 
             user.RefreshToken = tokens.RefreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); 
@@ -87,7 +90,7 @@ namespace MVCProject.Controllers
                 return Unauthorized(new { message = "Invalid refresh token" });
             }
 
-            var tokens = jwtService.GenerateTokens(user);
+            var tokens = await jwtService.GenerateTokensAsync(user);
 
             user.RefreshToken = tokens.RefreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
@@ -105,7 +108,7 @@ namespace MVCProject.Controllers
         }
 
 // POST: api/Account/VerifyEmail
-[HttpPost("VerifyEmail")]
+        [HttpPost("VerifyEmail")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailView model)
         {
             if (!ModelState.IsValid)
@@ -147,6 +150,19 @@ namespace MVCProject.Controllers
         {
             await signInManager.SignOutAsync();
             return Ok(new { message = "Logged out" });
+        }
+
+        [Authorize]
+        [HttpGet("WhoAmI")]
+        public IActionResult WhoAmI()
+        {
+            var userName = User.Identity?.Name ?? "anonymous";
+            var roles = User.Claims
+                            .Where(c => c.Type == ClaimTypes.Role)
+                            .Select(c => c.Value)
+                            .ToList();
+
+            return Ok(new { userName, roles });
         }
     }
 }
