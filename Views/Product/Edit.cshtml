@@ -34,10 +34,10 @@
             <div class="form-group mb-3">
                 <label asp-for="Status" class="control-label"></label>
                 <select asp-for="Status" class="form-control" asp-items="@(new List<SelectListItem> {
-                                                                                                                                                new SelectListItem { Text = "Pending", Value = "Pending" },
-                                                                                                                                                new SelectListItem { Text = "Available", Value = "Available" },
-                                                                                                                                                new SelectListItem { Text = "Sold", Value = "Sold" }
-                                                                                                                                            })"></select>
+                    new SelectListItem { Text = "Pending", Value = "Pending" },
+                    new SelectListItem { Text = "Available", Value = "Available" },
+                    new SelectListItem { Text = "Sold", Value = "Sold" }
+                })"></select>
                 <span asp-validation-for="Status" class="text-danger"></span>
             </div>
 

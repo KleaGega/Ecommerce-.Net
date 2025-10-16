@@ -112,57 +112,64 @@ namespace MVCProject.Controllers
             }
             return Ok(product);
         }
-        [Authorize]
-        // POST: Product/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        [Authorize(Roles = "Admin")]
         [HttpPut("Edit/{id}")]
-        //[ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Price,Description,Status,ImagePath")] Product product, IFormFile? ImageFile)
+        public async Task<IActionResult> Edit(int id, [FromForm] Product product, IFormFile? ImageFile)
         {
             if (id != product.Id)
-            {
-                return NotFound();
-            }
+                return BadRequest("Product ID mismatch.");
 
-            if (ModelState.IsValid)
-            {
-                try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var existingProduct = await _context.Product.FindAsync(id);
+            if (existingProduct == null)
+                return NotFound("Product not found.");
+
+            try { 
+                existingProduct.Name = product.Name;
+                existingProduct.Price = product.Price;
+                existingProduct.Description = product.Description;
+                existingProduct.Status = product.Status;
+
+                if (ImageFile != null && ImageFile.Length > 0)
                 {
-                    if (ImageFile != null && ImageFile.Length > 0)
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
+                    if (!Directory.Exists(uploadsFolder))
+                        Directory.CreateDirectory(uploadsFolder);
+
+                    if (!string.IsNullOrEmpty(existingProduct.ImagePath))
                     {
-                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
-                        if (!Directory.Exists(uploadsFolder))
-                            Directory.CreateDirectory(uploadsFolder);
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await ImageFile.CopyToAsync(stream);
-                        }
-
-                        product.ImagePath = "/images/" + uniqueFileName;
+                        var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", existingProduct.ImagePath.TrimStart('/'));
+                        if (System.IO.File.Exists(oldPath))
+                            System.IO.File.Delete(oldPath);
                     }
 
-                    _context.Update(product);
-                    await _context.SaveChangesAsync();
+                    var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await ImageFile.CopyToAsync(stream);
+                    }
+
+                    existingProduct.ImagePath = "/images/" + uniqueFileName;
                 }
-                catch (DbUpdateConcurrencyException)
+
+                _context.Update(existingProduct);
+                await _context.SaveChangesAsync();
+                return Ok(new
                 {
-                    if (!ProductExists(product.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                    product = existingProduct
+                });
             }
-            return Ok(product);
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProductExists(product.Id))
+                    return NotFound("Product no longer exists.");
+                else
+                    throw;
+            }
         }
 
         [Authorize]
@@ -186,9 +193,8 @@ namespace MVCProject.Controllers
         }
 
         // POST: Product/Delete/5
-        [Authorize]
+        [Authorize(Roles ="Admin")]
         [HttpDelete("Delete/{id}")]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var product = await _context.Product.FindAsync(id);
@@ -198,7 +204,7 @@ namespace MVCProject.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return Ok(product);
         }
      
         private bool ProductExists(int id)

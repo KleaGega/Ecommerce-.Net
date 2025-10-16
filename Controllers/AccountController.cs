@@ -63,7 +63,7 @@ namespace MVCProject.Controllers
             if (!result.Succeeded)
                 return Unauthorized(new { message = "Invalid login attempt" });
 
-            var tokens = await  jwtService.GenerateTokensAsync(user);
+            var tokens = await  jwtService.GenerateTokensAsync(user);                                                                                                                        
 
             user.RefreshToken = tokens.RefreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); 
