@@ -8,7 +8,7 @@ namespace MVCProject.Models
         public string Description { get; set; } = string.Empty;
         public string Status { get; set; } = "Pending";
         public string? ImagePath { get; set; }
-
-        //public decimal PriceTotal { get; set;} = decimal.Zero;
+        public int? CategoryId { get; set; }
+        public Category? Category { get; set; }
     }
 }
