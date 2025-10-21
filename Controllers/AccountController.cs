@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MVCProject.Data;
 using MVCProject.Models;
 using MVCProject.Services;
 using MVCProject.ViewModels;
+using SQLitePCL;
 using System.Security.Claims;
 
 namespace MVCProject.Controllers
@@ -16,13 +19,16 @@ namespace MVCProject.Controllers
         private readonly UserManager<Users> userManager;
         private readonly JwtService jwtService;
         private readonly IConfiguration configuration;
+        private readonly MvcProductContext _context;
 
-        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager, JwtService jwtService, IConfiguration configuration)
+
+        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager, JwtService jwtService, IConfiguration configuration, MvcProductContext context)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
             this.jwtService = jwtService;
             this.configuration = configuration;
+            _context = context;
         }
 
         // POST: api/Account/Register
@@ -36,7 +42,10 @@ namespace MVCProject.Controllers
             {
                 FullName = model.Name,
                 Email = model.Email,
-                UserName = model.Email
+                UserName = model.Email,
+                City = model.City,
+                PhoneNumber = model.PhoneNumber2,
+                
             };
 
             var result = await userManager.CreateAsync(user, model.Password);
@@ -63,10 +72,10 @@ namespace MVCProject.Controllers
             if (!result.Succeeded)
                 return Unauthorized(new { message = "Invalid login attempt" });
 
-            var tokens = await  jwtService.GenerateTokensAsync(user);                                                                                                                        
+            var tokens = await jwtService.GenerateTokensAsync(user);
 
             user.RefreshToken = tokens.RefreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); 
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
             await userManager.UpdateAsync(user);
 
             var expiresIn = int.Parse(configuration["Jwt:TokenValidityMins"]) * 60;
@@ -76,7 +85,8 @@ namespace MVCProject.Controllers
                 Token = tokens.AccessToken,
                 RefreshToken = tokens.RefreshToken,
                 ExpiresIn = expiresIn,
-                UserName = user.UserName
+                UserName = user.UserName,
+                UserId = user.Id,
             });
         }
 
@@ -107,7 +117,7 @@ namespace MVCProject.Controllers
             });
         }
 
-// POST: api/Account/VerifyEmail
+        // POST: api/Account/VerifyEmail
         [HttpPost("VerifyEmail")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailView model)
         {
@@ -164,5 +174,27 @@ namespace MVCProject.Controllers
 
             return Ok(new { userName, roles });
         }
+
+        [HttpGet("userInfoById/{userId}")]
+        public async Task<IActionResult> GetUserInfoById(string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(new { message = "UserId is required" });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            return Ok(new
+            {
+                user.Id,
+                user.UserName,
+                user.Email,
+                user.FullName,
+                user.PhoneNumber,
+                user.City,
+            });
+        }
     }
-}
+
+    }

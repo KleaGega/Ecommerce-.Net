@@ -9,6 +9,8 @@ namespace MVCProject.ViewModels
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress]
         public string Email { get; set; }
+        public string? City { get; set; }
+        public string PhoneNumber2 { get; set; } = string.Empty;
         [Required(ErrorMessage ="Password is required")]
         [StringLength(40,MinimumLength=8,ErrorMessage ="The {0} must be at {2} and at max {1} character")]
         [DataType(DataType.Password)]
