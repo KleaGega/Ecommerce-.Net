@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MVCProject.Models;
+using System.Reflection.Emit;
 
 namespace MVCProject.Data
 {
@@ -16,6 +17,7 @@ namespace MVCProject.Data
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+
 
 
 
@@ -67,6 +69,12 @@ namespace MVCProject.Data
                 .WithMany()
                 .HasForeignKey(oi => oi.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+
+            builder.Entity<Order>()
+               .HasMany(o => o.OrderItems)
+               .WithOne(oi => oi.Order)
+               .HasForeignKey(oi => oi.OrderId);
         }
 
 

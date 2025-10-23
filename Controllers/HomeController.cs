@@ -21,8 +21,8 @@ namespace MVCProject.Controllers
         [HttpGet("Index")]
         public async Task<IActionResult> Index()
         {
-            var products = await _context.Product
-                                         .OrderByDescending(p => p.Id)
+            var products = await _context.Product                
+                                         .OrderBy(p => p.Id)
                                          .Take(8)
                                          .ToListAsync();
 

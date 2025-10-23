@@ -33,7 +33,6 @@ namespace MVCProject.Controllers
                     Quantity = c.Quantity,
                     UserName = c.User.FullName,
                     ImagePath = c.Product.ImagePath,
-                   
 
                 }).ToListAsync();
 
