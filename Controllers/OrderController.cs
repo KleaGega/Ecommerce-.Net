@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MVCProject.Data;
@@ -33,7 +34,7 @@ namespace MVCProject.Controllers
 
             var order = new Order
             {
-                UserId = dto.UserId,
+                UserId = dto.UserId,               
                 OrderDate = DateTime.UtcNow,
                 Status = "Pending",
                 TotalAmount = cartItems.Sum(ci => ci.Product.Price * ci.Quantity),
@@ -47,12 +48,13 @@ namespace MVCProject.Controllers
 
             _context.Orders.Add(order);
             //_context.CartItems.RemoveRange(cartItems);
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
 
             var orderDto = new OrderDto
             {
                 Id = order.Id,
                 UserId = order.UserId, 
+               
                 OrderDate = order.OrderDate,
                 TotalAmount = order.TotalAmount,
                 Status = order.Status,
@@ -70,22 +72,24 @@ namespace MVCProject.Controllers
                 }).ToList()
 
             };
+            await _context.SaveChangesAsync();
 
             return Ok(orderDto);
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderDto>>> GetAllOrders()
         {
             var orders = await _context.Orders
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
+                .ThenInclude(oi => oi.Product).Include(o => o.User)
                 .ToListAsync();
 
             var orderDtos = orders.Select(o => new OrderDto
             {
                 Id = o.Id,
                 UserId = o.UserId, 
+                UserName = o.User?.FullName,
                 OrderDate = o.OrderDate,
                 TotalAmount = o.TotalAmount,
                 Status = o.Status,
@@ -95,6 +99,7 @@ namespace MVCProject.Controllers
                     ProductName = oi.Product?.Name,
                     UnitPrice = oi.UnitPrice,
                     Quantity = oi.Quantity,
+                    ImagePath = oi.Product.ImagePath,
                 }).ToList()
             }).ToList();
 

@@ -6,6 +6,7 @@ namespace MVCProject.Models
     {
         public int Id { get; set; }
         public string UserId { get; set; } 
+        public string UserName { get; set; } = string.Empty;
         public Users User { get; set; }
 
         public DateTime OrderDate { get; set; } = DateTime.UtcNow;
